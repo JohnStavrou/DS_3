@@ -1,7 +1,10 @@
-import java.rmi.*;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
 
 public interface Operations extends Remote
 {
-    public Contact searchNumber(String name) throws RemoteException;
-    public boolean insertContact (String name, String address, String number) throws RemoteException;
+    public MyEvent getEvent() throws RemoteException;
+    public void Notify() throws RemoteException;
+    public void Wait() throws RemoteException;
+    public void ManageUsers(boolean online) throws RemoteException;
 }

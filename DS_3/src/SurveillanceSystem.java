@@ -1,55 +1,62 @@
-import java.io.*;;
-import java.util.*;
-import java.rmi.*;
-import java.rmi.server.*;
+import java.util.ArrayList;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 
 public class SurveillanceSystem extends UnicastRemoteObject implements Operations
 {
-    private ArrayList<Contact> directory;
+    public static ArrayList<MyEvent> Events = new ArrayList<>();
+    public static int toNotify = 0;
 
     public SurveillanceSystem() throws RemoteException
     {
         super();
-
-        String newline;
-        String str[];
-
-       /* try
+    }
+        
+    @Override
+    public synchronized MyEvent getEvent() throws RemoteException
+    {
+        MyEvent event = null;
+        try
         {
-            directory = new ArrayList<Contact>();
-            BufferedReader instream = new BufferedReader(new FileReader("phonedirectory.txt"));
+            if(Events.isEmpty())
+                wait();
 
-            while( (newline = instream.readLine()) != null )
+            event = Events.get(Events.size() - 1);
+            while(event.getNotified() == toNotify)
             {
-                str = newline.split(":");
-                directory.add(new Contact(str[0], str[1], str[2]));
+                wait();
+                event = Events.get(Events.size() - 1);
             }
             
-            for(Contact c : directory)
-                System.out.println(c.getName() + " " + c.getNumber());
+            event.setNotified(event.getNotified() + 1);
         }
-        catch (IOException ex)
+        catch (InterruptedException ex) { }
+        
+        return event;
+    }
+
+    @Override
+    public synchronized void Notify() throws RemoteException
+    {
+        notifyAll();
+    }
+
+    @Override
+    public synchronized void Wait() throws RemoteException
+    {
+        try
         {
-            ex.printStackTrace();
-        }*/
+            wait();
+        }
+        catch (InterruptedException ex) { }
     }
-    
-    public synchronized Contact searchNumber(String name) throws RemoteException
+
+    @Override
+    public void ManageUsers(boolean online) throws RemoteException
     {
-        Contact ret = null;
-        for(int i = 0; i < directory.size(); i++)
-            if(name.equals(directory.get(i).getName()))
-                ret=directory.get(i);
-        return ret;
-    }
-    
-    public synchronized boolean insertContact(String name, String address, String number) throws RemoteException
-    {
-        for(int i=0; i<directory.size();i++)
-            if(name.equals(directory.get(i).getName()))
-                return false;
-        directory.add(new Contact(name, address, number));
-        System.out.println("Inserting "+ name);
-    return true;
+        if(online)
+            toNotify++;
+        else
+            toNotify--;
     }
 }
