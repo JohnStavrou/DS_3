@@ -29,8 +29,7 @@ public class MotionDetector extends Thread
                 event = new MyEvent();
                 SurveillanceSystem.Events.add(event);
                 System.out.println(event.getName());
-                // Ενημερώνει το σύστημα οτι ένα νέο γεγονός έχει παραχθεί.
-                op.Notify();
+                op.Notify(); // Ενημερώνει το σύστημα οτι ένα νέο γεγονός έχει παραχθεί.
             }
         }
         catch (InterruptedException | NotBoundException | MalformedURLException | RemoteException ex) { }

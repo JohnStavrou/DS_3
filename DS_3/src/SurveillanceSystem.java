@@ -25,10 +25,10 @@ public class SurveillanceSystem extends UnicastRemoteObject implements Operation
         Images.add(new ImageIcon("frames/tile003.png"));
     }
         
-    /* Η συνάρτηση getEvent επιστρέφει στον εκάστοτε φύλακα ένα γεγενός κίνησης που
+    /* Η συνάρτηση getEvent επιστρέφει στον εκάστοτε φύλακα ένα γεγονός κίνησης που
        το σύστημα έχει ανιχνεύσει. */
     @Override
-    public synchronized MyEvent getEvent(Thread thread) throws RemoteException
+    public synchronized MyEvent getEvent(String thread) throws RemoteException
     {
         MyEvent event = null;
         try
@@ -38,19 +38,19 @@ public class SurveillanceSystem extends UnicastRemoteObject implements Operation
                 wait();
 
             /* Παίρνουμε το τελευταίο γεγονός που έχει καταγραφεί και ελέγχουμε μέσω
-               της λίστας notified του γεγονότος πόσοι φύλακες έχουν ενημερωθεί από
-               αυτό. Αν η λίστα περιέχει το ID του εκάστοτε thread, σημαίνει οτι ο
-               φύλακας (thread) έχει λάβει το γεγονός. Τότε το thread περιμένει μέχρι
-               να γίνει notify από την παραγωγή ενός νέου γεγονότος. */
+               της λίστας notified του γεγονότος αν ο εκάστοτε φύλακας (Thread) το
+               έχει λάβει. Αν το έχει λάβει η λίστα θα περιέχει το name του thread
+               και το thread θα περιμένει μέχρι να γίνει notify λόγω της παραγωγής
+               ενός νέου γεγονότος. */
             event = Events.get(Events.size() - 1);
-            while(event.getNotified().contains(thread.getId()))
+            while(event.getNotified().contains(thread))
             {
                 wait();
                 event = Events.get(Events.size() - 1);
             }
             
-            // Ενημερώνω τη λίστα του γεγονότος οτι έχει ενημερώσει κάποιον φύλακα.
-            event.getNotified().add(thread.getId());
+            // Ενημερώνω τη λίστα του γεγονότος οτι έχει ενημερώσει τον συγκεκριμένο φύλακα.
+            event.getNotified().add(thread);
         }
         catch (InterruptedException ex) { }
         

@@ -12,7 +12,7 @@ public class MyEvent implements Serializable
     private Date date;
     private String name;
     private ImageIcon image;
-    private ArrayList<Long> notified; 
+    private ArrayList<String> notified; 
     
     Random r = new Random();
     SimpleDateFormat sdf = new SimpleDateFormat("EEE MMM dd HH:mm:ss z yyyy");
@@ -48,7 +48,7 @@ public class MyEvent implements Serializable
         return image;
     }
     
-    public ArrayList<Long> getNotified()
+    public ArrayList<String> getNotified()
     {
         return notified;
     }

@@ -19,8 +19,8 @@ import java.net.MalformedURLException;
 
 public class Guard extends JFrame implements Runnable
 {
-    private String name;
-    private boolean online;
+    private String name; // Το όνομα του Thread.
+    private boolean online; // Αναγνωριστικό για τον αν ο φύλακας είναι εγγεγραμμένος στο σύστημα.
     
     Operations op;
     JLabel Image = new JLabel();
@@ -38,9 +38,9 @@ public class Guard extends JFrame implements Runnable
         super(name);
         
         this.name = name;
-        this.online = false;
+        this.online = false; // Ο φύλακας αρχικοποιείται ως μη εγγεγραμμένος.
         
-        setSize(350, 700);
+        setSize(360, 700);
         setBackground(Color.GRAY);
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setResizable(false);
@@ -49,6 +49,7 @@ public class Guard extends JFrame implements Runnable
 
         try
         {
+            // Ορίζουμε σε ποια διεύθυνση μπορεί ο κάθε φύλακας να βρει το σύστημα παρακολούθησης.
             op = (Operations) Naming.lookup("//localhost/Server");
             System.out.println("~ Initializing " + name);
         }
@@ -59,11 +60,18 @@ public class Guard extends JFrame implements Runnable
     
     public void CreateMainPanel()
     {
+        /* Το πρώτο μέρος του γραφικού είναι ενα JTextArea που εμπεριέχεται μέσα σε
+           σε ένα JScrollPane και στο οποίο αναγράφονται τα γεγονότα. */
         TextArea.setFont(new Font("TimesRoman", Font.BOLD, 12));
         TextArea.setEditable(false);
         TextArea.setText(TextArea.getText() + "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OFFLINE ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n\n");
+        /* Η παρακάτω εντολή ενημερώνει το γραφικό έτσι ώστε όταν γεμίσει ο κάθετος
+           διαθέσιμος χώρος και εμφανιστεί η ScrollBar, δεν μένει στάσιμο ενώ συνεχίζει
+           να γεμίζει, αλλά ανανεώνεται και πηγαίνει πάντα στο κάτω μέρος που βρίσκονται
+           τα καινούρια γεγονότα. */
         ((DefaultCaret) TextArea.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
         
+        // Το κουμπί εγγραφής.
         SubButton.setFocusable(false);
         SubButton.setText("Subscribe");
         SubButton.setPreferredSize(new Dimension(340, 40));
@@ -72,20 +80,16 @@ public class Guard extends JFrame implements Runnable
         {
             public void mouseClicked(java.awt.event.MouseEvent evt)
             {
-                try
-                {
-                    UnsubButton.setVisible(true);
-                    SubButton.setVisible(false);
-                    
-                    online = true;
-                    System.out.println("~ " + name + " is now online");
-                    Thread.sleep(500);
-                    Append();
-                }
-                catch (InterruptedException ex) { }
+                UnsubButton.setVisible(true);
+                SubButton.setVisible(false);
+
+                online = true;
+                System.out.println("~ " + name + " is now online");
+                Append();
             }
         });
         
+        // Το κουμπί απεγγραφής.
         UnsubButton.setVisible(false);
         UnsubButton.setFocusable(false);
         UnsubButton.setText("Unsubscribe");
@@ -95,28 +99,27 @@ public class Guard extends JFrame implements Runnable
         {
             public void mouseClicked(java.awt.event.MouseEvent evt)
             {
-                try
-                {
-                    SubButton.setVisible(true);
-                    UnsubButton.setVisible(false);
-                
-                    online = false;
-                    System.out.println("~ " + name + " is now offline");
-                    Thread.sleep(500);
-                    Append();
-                }
-                catch (InterruptedException ex) { }
+                SubButton.setVisible(true);
+                UnsubButton.setVisible(false);
+
+                online = false;
+                System.out.println("~ " + name + " is now offline");
+                Append();
             }
         });
 
+        // Το JPanel περιέχει την εικόνα.
         ImagePanel.setBackground(Color.WHITE);
         ImagePanel.setPreferredSize(new Dimension(50, 290));
         ImagePanel.add(Image);
         
+        // Το JPanel περιέχει τα κουμπιά εγγραφής/απεγγραφής.
         ButtonPanel.setBackground(Color.WHITE);
         ButtonPanel.add(SubButton);
         ButtonPanel.add(UnsubButton);
         
+        /* Το JPanel που περιέχει τα 2 παραπάνω Panel και αναπαριστά τη δεύτερη σειρά
+           του συνολικού MainPanel όλου του JFrame. */ 
         Row2Panel.setLayout(new BoxLayout(Row2Panel, BoxLayout.Y_AXIS));
         Row2Panel.add(ImagePanel);
         Row2Panel.add(ButtonPanel);
@@ -128,19 +131,34 @@ public class Guard extends JFrame implements Runnable
         add(MainPanel);
     }
 
+    /* Η συνάρτηση run τρέχει συνεχώς και ζητάει γεγονότα από το σύστημα ασφαλείας. */
     @Override
     public void run()
     {
+        MyEvent event;
         while(true)
             try
             {
+                /* Περιμένει πολυ λίγο για να ενημερωθεί σωστά η μεταβλητή online,
+                   αλλιώς δεν αναγνωρίζει την αλλαγή της. */
                 Thread.sleep(100);
+                // Ελέγχουμε αν ο φύλακας είναι online.
                 if(online)
-                    Append(op.getEvent((Thread)(Runnable) this));
+                {
+                    // Αν είναι, ζητάμε ένα γεγονός από το σύστημα ασφαλείας. 
+                    event = op.getEvent(getName());
+                    /* Ξαναελέγχουμε αν ο φύλακας είναι online επειδή υπάρχει περίπτωση
+                       μέχρι το σύστημα να επιστρέψει κάποιο γεγονός ο φύλακας να
+                       έχει απεγγραφεί. Αν είναι online το γεγονός αναγράφεται. */
+                    if(online)
+                        Append(event);
+                }
             }
             catch (RemoteException | InterruptedException ex) {}
     }
     
+    /* Η συνάρτηση Append με όρισμα ένα γεγονός, αναγράφει το γεγονός στο γραφικό και
+       ανανεώνει και εμφανίζει την εικόνα του γεγονότος. */
     public void Append(MyEvent event)
     {
         TextArea.setText(TextArea.getText() + event.getName() + "\n");
@@ -148,6 +166,8 @@ public class Guard extends JFrame implements Runnable
         Image.repaint();
     }
     
+    /* Η συνάρτηση Append χωρίς ορίσματα, αναγράφει στο γραφικό αν ο φύλακας είναι
+       εγγεγραμμένος ή όχι στην υπηρεσία. */
     public void Append()
     {
         if(online)
