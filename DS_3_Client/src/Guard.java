@@ -19,7 +19,7 @@ import java.net.MalformedURLException;
 
 public class Guard extends JFrame implements Runnable
 {
-    private String name; // Το όνομα του Thread.
+    private String name; // Το όνομα του thread.
     private boolean online; // Αναγνωριστικό για τον αν ο φύλακας είναι εγγεγραμμένος στο σύστημα.
     
     Operations op;
@@ -36,16 +36,20 @@ public class Guard extends JFrame implements Runnable
     public Guard(String name)
     {
         super(name);
-        
+                
         this.name = name;
         this.online = false; // Ο φύλακας αρχικοποιείται ως μη εγγεγραμμένος.
         
+        Initialize();
+    }
+    
+    public void Initialize()
+    {
         setSize(360, 700);
         setBackground(Color.GRAY);
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setResizable(false);
         setLocationRelativeTo(null);
-        setVisible(true);
 
         try
         {
@@ -129,6 +133,7 @@ public class Guard extends JFrame implements Runnable
         MainPanel.add(Row2Panel);
         
         add(MainPanel);
+        setVisible(true);
     }
 
     /* Η συνάρτηση run τρέχει συνεχώς και ζητάει γεγονότα από το σύστημα ασφαλείας. */
