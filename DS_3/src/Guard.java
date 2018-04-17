@@ -112,12 +112,12 @@ public class Guard extends JFrame implements Runnable
             }
         });
 
-        // Το JPanel περιέχει την εικόνα.
+        // Το JPanel που περιέχει την εικόνα.
         ImagePanel.setBackground(Color.WHITE);
         ImagePanel.setPreferredSize(new Dimension(50, 290));
         ImagePanel.add(Image);
         
-        // Το JPanel περιέχει τα κουμπιά εγγραφής/απεγγραφής.
+        // Το JPanel που περιέχει τα κουμπιά εγγραφής/απεγγραφής.
         ButtonPanel.setBackground(Color.WHITE);
         ButtonPanel.add(SubButton);
         ButtonPanel.add(UnsubButton);
