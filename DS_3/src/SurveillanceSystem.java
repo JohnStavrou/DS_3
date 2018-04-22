@@ -1,68 +1,49 @@
 // Σταύρου Ιωάννης - icsd14190
 
+import java.util.Iterator;
 import java.util.ArrayList;
-import javax.swing.ImageIcon;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
-public class SurveillanceSystem extends UnicastRemoteObject implements Operations
+public class SurveillanceSystem extends UnicastRemoteObject implements ServerOperations
 {
-    // Η λίστα Events περιέχει όλα τα καταγεγραμμένα γεγονότα.
-    public static ArrayList<MyEvent> Events = new ArrayList<>();
-    
-    // Η λίστα Images περιέχει τις 4 δοσμένες εικόνες.
-    public static ArrayList<ImageIcon> Images = new ArrayList<>();
+    // Περιέχει τους συνδεδεμένους φύλακες.
+    public ArrayList<GuardOperations> Guards = new ArrayList<>();
 
     public SurveillanceSystem() throws RemoteException
     {
         super();
-        
-        /* Γεμίζω τη λίστα Images. Για να τρέξει ο κώδικας αρκεί να υπάρχει ένας φάκελος
-           frames μέσα στο φάκελο του project που να περιέχει τις 4 δοσμένες εικόνες. */
-        Images.add(new ImageIcon("frames/tile000.png"));
-        Images.add(new ImageIcon("frames/tile001.png"));
-        Images.add(new ImageIcon("frames/tile002.png"));
-        Images.add(new ImageIcon("frames/tile003.png"));
     }
-        
-    /* Η συνάρτηση getEvent επιστρέφει στον εκάστοτε φύλακα ένα γεγονός κίνησης που
-       το σύστημα έχει ανιχνεύσει. */
-    @Override
-    public synchronized MyEvent getEvent(String thread) throws RemoteException
-    {
-        MyEvent event = null;
-        try
-        {
-            // Αν δεν έχει καταγραφεί κάποιο γεγονός το thread περιμένει.
-            if(Events.isEmpty())
-                wait();
 
-            /* Παίρνουμε το τελευταίο γεγονός που έχει καταγραφεί και ελέγχουμε μέσω
-               της λίστας notified του γεγονότος αν ο εκάστοτε φύλακας (Thread) το
-               έχει λάβει. Αν το έχει λάβει η λίστα θα περιέχει το name του thread
-               και το thread θα περιμένει μέχρι να γίνει notify λόγω της παραγωγής
-               ενός νέου γεγονότος. */
-            event = Events.get(Events.size() - 1);
-            while(event.getNotified().contains(thread))
+    /* Η Notify δέχεται ένα νέο συμβάν από το σύστημα ανίχνευσης κίνησης και ενημερώνει
+       τους ενεργούς φύλακες. */
+    @Override
+    public void Notify(MyEvent event) throws RemoteException
+    {
+        System.out.println(event.getName());
+
+        Iterator<GuardOperations> iterator = Guards.iterator();
+        while(iterator.hasNext())
+            try
             {
-                wait();
-                event = Events.get(Events.size() - 1);
+                iterator.next().getEvent(event);
             }
-            
-            // Ενημερώνω τη λίστα του γεγονότος οτι έχει ενημερώσει τον συγκεκριμένο φύλακα.
-            event.getNotified().add(thread);
-        }
-        catch (InterruptedException ex) { }
-        
-        // Τελικά, επιστρέφω το γεγονός σε όποιον το ζήτησε.
-        return event;
+            catch (RemoteException ex) { }
     }
-
-    /* Η συνάρτηση Notify καλείται από το σύστημα ανίχνευσης κίνησης κάθε φορά που
-       καταγράφει κάποιο γεγονός για να κάνει notify τα threads των φυλάκων. */
+    
+    // Η Subscribe καλείται όταν ένα φύλακας εγγράφεται στο σύστημα.
     @Override
-    public synchronized void Notify() throws RemoteException
+    public void Subscribe(GuardOperations guard, String name) throws RemoteException
     {
-        notifyAll();
+        Guards.add(guard);
+        System.out.println(name + " is now online");
+    }
+    
+    // Η Unsubscribe καλείται όταν ένα φύλακας απεγγράφεται από το σύστημα.
+    @Override
+    public void Unsubscribe(GuardOperations guard, String name) throws RemoteException
+    {
+        Guards.remove(guard);
+        System.out.println(name + " is now offline");
     }
 }

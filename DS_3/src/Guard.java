@@ -16,114 +16,93 @@ import java.rmi.RemoteException;
 import java.rmi.NotBoundException;
 import javax.swing.text.DefaultCaret;
 import java.net.MalformedURLException;
+import java.rmi.server.UnicastRemoteObject;
 
-public class Guard extends JFrame implements Runnable
+public class Guard extends UnicastRemoteObject implements Runnable, GuardOperations
 {
     private String name; // Το όνομα του Thread.
     private boolean online; // Αναγνωριστικό για τον αν ο φύλακας είναι εγγεγραμμένος στο σύστημα.
     
-    Operations op;
+    ServerOperations op;
+    GuardOperations guard;
     JLabel Image = new JLabel();
+    JFrame Frame = new JFrame();
+    JButton Button = new JButton();
     JPanel MainPanel = new JPanel();
     JPanel Row2Panel = new JPanel();
     JPanel ImagePanel = new JPanel();
     JPanel ButtonPanel = new JPanel();
-    JButton SubButton = new JButton();
     JButton UnsubButton = new JButton();
     JTextArea TextArea = new JTextArea();
     JScrollPane ScrollPane = new JScrollPane(TextArea);
 
-    public Guard(String name)
+    public Guard(String name) throws RemoteException
     {
-        super(name);
-
-        this.name = name;
-        this.online = false; // Ο φύλακας αρχικοποιείται ως μη εγγεγραμμένος.
-        
-        Initialize();
-    }
-
-    public void Initialize()
-    {
-        setSize(360, 700);
-        setBackground(Color.GRAY);
-        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-        setResizable(false);
-        setLocationRelativeTo(null);
-
         try
         {
-            // Ορίζουμε σε ποια διεύθυνση μπορεί ο κάθε φύλακας να βρει το σύστημα παρακολούθησης.
-            op = (Operations) Naming.lookup("//localhost/Server");
-            System.out.println("~ Initializing " + name);
+            this.name = name;
+            this.online = false;
+        
+            /* Κρατάω το interface στη μεταβλητή guard για να το στείλω αργότερα στο
+               σύστημα για να ξέρει για ποιόν φύλακα πρόκειται. */
+            guard = (GuardOperations) this; // Κραταω το interface
+
+            op = (ServerOperations) Naming.lookup("//localhost/Server");
         }
         catch (NotBoundException | MalformedURLException | RemoteException ex) { }
-        
-        CreateMainPanel();
     }
-    
-    public void CreateMainPanel()
+
+    public void InitializeFrame()
     {
         /* Το πρώτο μέρος του γραφικού είναι ενα JTextArea που εμπεριέχεται μέσα σε
-           σε ένα JScrollPane και στο οποίο αναγράφονται τα γεγονότα. */
+           σε ένα JScrollPane και στο οποίο αναγράφονται τα συμβάντα. */
         TextArea.setFont(new Font("TimesRoman", Font.BOLD, 12));
         TextArea.setEditable(false);
-        TextArea.setText(TextArea.getText() + "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OFFLINE ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n\n");
         /* Η παρακάτω εντολή ενημερώνει το γραφικό έτσι ώστε όταν γεμίσει ο κάθετος
            διαθέσιμος χώρος και εμφανιστεί η ScrollBar, δεν μένει στάσιμο ενώ συνεχίζει
            να γεμίζει, αλλά ανανεώνεται και πηγαίνει πάντα στο κάτω μέρος που βρίσκονται
-           τα καινούρια γεγονότα. */
+           τα καινούρια συμβάντα. */
         ((DefaultCaret) TextArea.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
         
-        // Το κουμπί εγγραφής.
-        SubButton.setFocusable(false);
-        SubButton.setText("Subscribe");
-        SubButton.setPreferredSize(new Dimension(340, 40));
-        SubButton.setFont(new Font("TimesRoman", Font.BOLD, 15));
-        SubButton.addMouseListener(new java.awt.event.MouseAdapter()
+        // Το κουμπί εγγραφής/απεγγραφής.
+        Button.setFocusable(false);
+        Button.setText("Subscribe");
+        Button.setPreferredSize(new Dimension(340, 40));
+        Button.setFont(new Font("TimesRoman", Font.BOLD, 15));
+        Button.addMouseListener(new java.awt.event.MouseAdapter()
         {
             public void mouseClicked(java.awt.event.MouseEvent evt)
             {
-                UnsubButton.setVisible(true);
-                SubButton.setVisible(false);
-
-                online = true;
-                System.out.println("~ " + name + " is now online");
-                Append();
+                try
+                {
+                    if(online)
+                    {
+                        online = false;
+                        Button.setText("Subscribe");
+                        op.Unsubscribe(guard, name);
+                    }
+                    else
+                    {
+                        online = true;
+                        Button.setText("Unsubscribe");
+                        op.Subscribe(guard, name);
+                    }
+                }
+                catch (RemoteException ex) { }
             }
         });
-        
-        // Το κουμπί απεγγραφής.
-        UnsubButton.setVisible(false);
-        UnsubButton.setFocusable(false);
-        UnsubButton.setText("Unsubscribe");
-        UnsubButton.setPreferredSize(new Dimension(340, 40));
-        UnsubButton.setFont(new Font("TimesRoman", Font.BOLD, 15));
-        UnsubButton.addMouseListener(new java.awt.event.MouseAdapter()
-        {
-            public void mouseClicked(java.awt.event.MouseEvent evt)
-            {
-                SubButton.setVisible(true);
-                UnsubButton.setVisible(false);
-
-                online = false;
-                System.out.println("~ " + name + " is now offline");
-                Append();
-            }
-        });
-
+       
         // Το JPanel που περιέχει την εικόνα.
         ImagePanel.setBackground(Color.WHITE);
         ImagePanel.setPreferredSize(new Dimension(50, 290));
         ImagePanel.add(Image);
         
-        // Το JPanel που περιέχει τα κουμπιά εγγραφής/απεγγραφής.
+        // Το JPanel που περιέχει τo κουμπί εγγραφής/απεγγραφής.
         ButtonPanel.setBackground(Color.WHITE);
-        ButtonPanel.add(SubButton);
-        ButtonPanel.add(UnsubButton);
+        ButtonPanel.add(Button);
         
         /* Το JPanel που περιέχει τα 2 παραπάνω Panel και αναπαριστά τη δεύτερη σειρά
-           του συνολικού MainPanel όλου του JFrame. */ 
+           του συνολικού MainPanel. */ 
         Row2Panel.setLayout(new BoxLayout(Row2Panel, BoxLayout.Y_AXIS));
         Row2Panel.add(ImagePanel);
         Row2Panel.add(ButtonPanel);
@@ -132,52 +111,28 @@ public class Guard extends JFrame implements Runnable
         MainPanel.add(ScrollPane);
         MainPanel.add(Row2Panel);
         
-        add(MainPanel);
-        setVisible(true);
+        Frame.setSize(360, 700);
+        Frame.setTitle(name);
+        Frame.setBackground(Color.GRAY);
+        Frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        Frame.setResizable(false);
+        Frame.setLocationRelativeTo(null);
+        Frame.add(MainPanel);
+        Frame.setVisible(true);
     }
-
-    /* Η συνάρτηση run τρέχει συνεχώς και ζητάει γεγονότα από το σύστημα ασφαλείας. */
+    
     @Override
     public void run()
     {
-        MyEvent event;
-        while(true)
-            try
-            {
-                /* Περιμένει πολυ λίγο για να ενημερωθεί σωστά η μεταβλητή online,
-                   αλλιώς δεν αναγνωρίζει την αλλαγή της. */
-                Thread.sleep(100);
-                // Ελέγχουμε αν ο φύλακας είναι online.
-                if(online)
-                {
-                    // Αν είναι, ζητάμε ένα γεγονός από το σύστημα ασφαλείας. 
-                    event = op.getEvent(getName());
-                    /* Ξαναελέγχουμε αν ο φύλακας είναι online επειδή υπάρχει περίπτωση
-                       μέχρι το σύστημα να επιστρέψει κάποιο γεγονός ο φύλακας να
-                       έχει απεγγραφεί. Αν είναι online το γεγονός αναγράφεται. */
-                    if(online)
-                        Append(event);
-                }
-            }
-            catch (RemoteException | InterruptedException ex) {}
+        InitializeFrame();
+        System.out.println(name + " initialized");
     }
-    
-    /* Η συνάρτηση Append με όρισμα ένα γεγονός, αναγράφει το γεγονός στο γραφικό και
-       ανανεώνει και εμφανίζει την εικόνα του γεγονότος. */
-    public void Append(MyEvent event)
+
+    @Override
+    public void getEvent(MyEvent event) throws RemoteException
     {
         TextArea.setText(TextArea.getText() + event.getName() + "\n");
         Image.setIcon(event.getImage());
         Image.repaint();
-    }
-    
-    /* Η συνάρτηση Append χωρίς ορίσματα, αναγράφει στο γραφικό αν ο φύλακας είναι
-       εγγεγραμμένος ή όχι στην υπηρεσία. */
-    public void Append()
-    {
-        if(online)
-            TextArea.setText(TextArea.getText() + "~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ONLINE ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n");
-        else
-            TextArea.setText(TextArea.getText() + "\n~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ OFFLINE ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~\n\n");
     }
 }
